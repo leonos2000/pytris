@@ -22,12 +22,16 @@ class Tetris:
     def tetris(self):
         if self.isLaying():
             self.checkAndDestroyLine()
-            self.newBlock()
+            if self.newBlock():
+                return (True, self.blocksCounter)
         else:
             self.wipeBlockFromMap()
             self.currentBlock.y -= 1
 
         self.putBlockOnMap()
+
+        return (False, self.blocksCounter)
+
 
 
     def rotate(self, direction):
@@ -64,16 +68,16 @@ class Tetris:
 
 
     def checkAndDestroyLine(self):
-        for i in range(self.currentBlock.h):
+        for i in range(self.currentBlock.h - 1, -1, -1):
             for j in self.map[self.currentBlock.y + i]:
                 if not j:
                     break
             else:
                 for j in range(self.currentBlock.y + i, self.mapHeight):
-                    try:
+                    if j == self.mapHeight - 1:
+                        self.map[j] = [False for x in self.map[j]]
+                    else:
                         self.map[j] = self.map[j + 1]
-                    except:
-                        pass
 
 
     def isLaying(self):
@@ -92,17 +96,27 @@ class Tetris:
         self.currentBlock = Block(random.randrange(7))
         self.currentBlock.x = int((self.mapWidth - self.currentBlock.w) / 2)
         self.currentBlock.y = self.mapHeight - self.currentBlock.h
+        
+        for i in range(self.currentBlock.h):
+            for j in range(self.currentBlock.w):
+                if self.map[self.currentBlock.y + i][self.currentBlock.x + j] and self.currentBlock.block[i][j]:
+                    return True
 
         self.blocksCounter += 1
+
+        return False
 
 
     def putBlockOnMap(self, delBlock=False):
         for i in range(self.currentBlock.h):
             for j in range(self.currentBlock.w):
-                if delBlock and self.currentBlock.block[i][j]:
-                    self.map[self.currentBlock.y + i][self.currentBlock.x + j] = False
-                elif self.map[self.currentBlock.y + i][self.currentBlock.x + j] or self.currentBlock.block[i][j]:
-                    self.map[self.currentBlock.y + i][self.currentBlock.x + j] = True
+                try:
+                    if delBlock and self.currentBlock.block[i][j]:
+                        self.map[self.currentBlock.y + i][self.currentBlock.x + j] = False
+                    elif self.map[self.currentBlock.y + i][self.currentBlock.x + j] or self.currentBlock.block[i][j]:
+                        self.map[self.currentBlock.y + i][self.currentBlock.x + j] = True
+                except:
+                    pass
 
 
     def wipeBlockFromMap(self):

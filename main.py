@@ -31,9 +31,12 @@ def main():
 
     while True:
         pass
-        cetris.tetris()
+        gameOver, score = cetris.tetris()
+        if gameOver:
+            print('GAME OVER!')
+            break
         gui.render(cetris.map)
-        print(cetris.currentBlock.skirt())
+        print(score)
         if keyboard.is_pressed('down'):
             time.sleep(0.05)
         else:
