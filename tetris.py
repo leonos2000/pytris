@@ -1,6 +1,7 @@
 import os
 import random
 import time
+import keyboard
 
 
 class Tetris:
@@ -28,6 +29,25 @@ class Tetris:
         else:
             self.wipeBlockFromMap()
             self.currentBlock.y -= 1
+
+        self.putBlockOnMap()
+
+    def rotate(self, direction):
+        self.wipeBlockFromMap()
+        self.currentBlock.rotate(direction)
+        self.putBlockOnMap()
+
+    def move(self, direction):
+        self.wipeBlockFromMap()
+
+        if direction == 'left':
+            if self.currentBlock.x < self.mapWidth - self.currentBlock.w:
+                self.currentBlock.x += 1
+        elif direction == 'right':
+            if self.currentBlock.x > 0:
+                self.currentBlock.x -= 1
+        else:
+            raise ValueError(f'invalid direction type (expected \'right\' or \'left\', got: {direction})')
 
         self.putBlockOnMap()
 
@@ -121,7 +141,6 @@ class Block:
         self.w = len(self.block[0])
         self.h = len(self.block)
 
-
     def skirt(self):
         skirt = []
         
@@ -150,14 +169,30 @@ class SimplestGui:
 
         buffer = ''
 
+        for i in range(len(data[0])):
+            buffer += '-'
+        buffer += '\r\n'
+
         for i in data:
+            buffer += '|'
             for j in i:
                 buffer += 'O' if j else ' '
-            buffer += '\r\n'
+            buffer += '|\r\n'
+
+        for i in range(len(data[0])):
+            buffer += '-'
         
         self._clean()
         print(buffer[::-1])
 
+
+def rotate(direction, gui, tetris):
+    tetris.rotate(direction)
+    gui.render(tetris.map)
+
+def move(direction, gui, tetris):
+    tetris.move(direction)
+    gui.render(tetris.map)
 
 
 def main():
@@ -165,11 +200,17 @@ def main():
     gui = SimplestGui()
     gui.render(tetris.map)
 
+    
+    keyboard.add_hotkey('right', lambda: move('right', gui, tetris))
+    keyboard.add_hotkey('left', lambda: move('left', gui, tetris))
+    keyboard.add_hotkey('up', lambda: rotate('cw', gui, tetris))
+
     while True:
         tetris.tetris()
         gui.render(tetris.map)
         print(tetris.currentBlock.skirt())
-        time.sleep(0.2)
+        time.sleep(0.1)
+        # tetris.move('right')
 
 
 if __name__ == "__main__":
