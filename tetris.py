@@ -1,4 +1,7 @@
 import random
+from functools import wraps
+import os
+import copy
 
 class Tetris:
 
@@ -14,6 +17,7 @@ class Tetris:
 
         self.score = 0
         self.blocksCounter = 0
+        self.destroyedLines = 0
 
         self.newBlock()
         self.putBlockOnMap()
@@ -23,27 +27,44 @@ class Tetris:
         if self.isLaying():
             self.checkAndDestroyLine()
             if self.newBlock():
-                return (True, self.blocksCounter)
+                return (True, self.blocksCounter, self.destroyedLines)
         else:
             self.wipeBlockFromMap()
             self.currentBlock.y -= 1
 
         self.putBlockOnMap()
 
-        return (False, self.blocksCounter)
+        return (False, self.blocksCounter, self.destroyedLines)
 
 
+    def put_block_on_map(func):
+        @wraps(func)
+        def wrapper(self, direction):
+            func(self, direction)
+            self.putBlockOnMap()
+        
+        return wrapper
 
+
+    @put_block_on_map
     def rotate(self, direction):
         self.wipeBlockFromMap()
+
+        blockBackup = copy.copy(self.currentBlock)
+
         self.currentBlock.rotate(direction)
+        if not self.isColliding():
+            return
 
-        if self.currentBlock.x < 0:
-            self.currentBlock.x = 0
-        elif self.currentBlock.x + self.currentBlock.w > self.mapWidth:
-            self.currentBlock.x = self.mapWidth - self.currentBlock.w
+        self.currentBlock.x += 1
+        if not self.isColliding():
+            return
 
-        self.putBlockOnMap()
+        self.currentBlock.x -= 2
+        if not self.isColliding():
+            return
+
+        self.currentBlock = copy.copy(blockBackup)
 
 
     def move(self, direction):
@@ -52,9 +73,13 @@ class Tetris:
         if direction == 'right':
             if self.currentBlock.x < self.mapWidth - self.currentBlock.w:
                 self.currentBlock.x += 1
+                if self.isColliding():
+                    self.currentBlock.x -= 1
         elif direction == 'left':
             if self.currentBlock.x > 0:
                 self.currentBlock.x -= 1
+                if self.isColliding():
+                    self.currentBlock.x += 1
         else:
             raise ValueError(f'invalid direction type (expected \'right\' or \'left\', got: {direction})')
 
@@ -79,7 +104,8 @@ class Tetris:
                     else:
                         self.map[j] = self.map[j + 1]
 
-
+                self.destroyedLines += 1
+        
     def isLaying(self):
         if self.currentBlock.y == 0:
             return True
@@ -90,6 +116,17 @@ class Tetris:
                     return True
                 i += 1
         return False
+    
+    def isColliding(self):
+        for i in range(self.currentBlock.h):
+            for j in range(self.currentBlock.w):
+                if (0 < (self.currentBlock.y + i) < len(self.map)) and (0 <= (self.currentBlock.x + j) < (len(self.map[0]))):
+                    if self.map[self.currentBlock.y + i][self.currentBlock.x + j] and self.currentBlock.block[i][j]:
+                        return True
+                else:
+                    return True
+        return False
+
 
 
     def newBlock(self):
@@ -97,10 +134,8 @@ class Tetris:
         self.currentBlock.x = int((self.mapWidth - self.currentBlock.w) / 2)
         self.currentBlock.y = self.mapHeight - self.currentBlock.h
         
-        for i in range(self.currentBlock.h):
-            for j in range(self.currentBlock.w):
-                if self.map[self.currentBlock.y + i][self.currentBlock.x + j] and self.currentBlock.block[i][j]:
-                    return True
+        if self.isColliding():
+            return True
 
         self.blocksCounter += 1
 
@@ -155,12 +190,12 @@ class Block:
         self.h = len(self.block)
 
 
-    def rotate(self, direction='cw'):
+    def rotate(self, direction='cw', reverse=False):
         tmpBlock = self.block
         self.block = []
 
         if direction == 'cw':
-            for i in range(len(tmpBlock[0]) - 1, -1, -1):
+            for i in range(len(tmpBlock[0]) -1, -1, -1):
                 self.block.append([x[i] for x in tmpBlock])
             self.x += int((self.w - len(self.block[0])) / 2)
         elif direction == 'ccw':
