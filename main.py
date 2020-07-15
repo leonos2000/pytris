@@ -1,46 +1,51 @@
 import tetris
 import simplegui
 import os
-import keyboard
+from pynput import keyboard
 import time
 
+cetris = tetris.Tetris(mapType='color')
+gui = simplegui.SimplestGui()
 
 
-def rotate(direction, gui, tetris):
-    tetris.rotate(direction)
-    gui.render(tetris.map)
 
-def move(direction, gui, tetris):
-    tetris.move(direction)
-    gui.render(tetris.map)
+def on_press(key):
+    if key == keyboard.Key.right:
+        cetris.move('right')
+    if key == keyboard.Key.left:
+        cetris.move('left')
+    if key == keyboard.Key.up:
+        cetris.rotate('cw')
+    if key == keyboard.Key.space:
+        cetris.drop()
+    if key  == keyboard.KeyCode(char = 'c'):
+        cetris.hold()
+           
+    holdedBlock = tetris.Block(cetris.holdedBlock)
+    gui.render(cetris.map, holdedBlock.coloredBlock())
 
-def drop(gui, tetris):
-    tetris.drop()
-    gui.render(tetris.map)
+def on_release(key):
+    if key == keyboard.Key.esc:
+        # Stop listener
+        return False
+
+listener = keyboard.Listener(
+    on_press=on_press,
+    on_release=on_release)
+listener.start()
 
 
 def main():
-    cetris = tetris.Tetris()
-    gui = simplegui.SimplestGui()
-    gui.render(cetris.map)
-
-    keyboard.add_hotkey('right', lambda: move('right', gui, cetris))
-    keyboard.add_hotkey('left', lambda: move('left', gui, cetris))
-    keyboard.add_hotkey('up', lambda: rotate('cw', gui, cetris))
-    keyboard.add_hotkey('space', lambda: drop(gui, cetris))
 
     while True:
-        pass
-        gameOver, score = cetris.tetris()
+        gameOver, score, lines = cetris.tetris()
         if gameOver:
             print('GAME OVER!')
             break
-        gui.render(cetris.map)
-        print(score)
-        if keyboard.is_pressed('down'):
-            time.sleep(0.05)
-        else:
-            time.sleep(0.4)
+        holdedBlock = tetris.Block(cetris.holdedBlock)
+        gui.render(cetris.map, holdedBlock.coloredBlock())
+        print(lines)
+        time.sleep(0.5)
 
 if __name__ == "__main__":
     main()
