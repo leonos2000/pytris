@@ -5,37 +5,33 @@ import copy
 
 class Tetris:
 
-    def __init__(self, blockPreset='default', mapType='mono', height=20, width=10):
+    def __init__(self, height=20, width=10):
         self.mapWidth = width
         self.mapHeight = height
-        self.map = []
 
-        if mapType == 'mono':
-            self.emptyMapVal = False
-        elif mapType == 'color':
-            self.emptyMapVal = -1
-        else:
-            raise ValueError(f'invalid map type (expected \'mono\' or \'color\', got: {mapType})')
+        self.map = []
+        self.emptyMapVal = -1
+        self.score = 0
+        self.blocksCounter = 0
+        self.destroyedLines = 0
+        self.holdedBlock = 7
+        self.lastHoldedBlockNumber = 0
         
         for i in range(height):
             self.map.append(list([self.emptyMapVal for j in range(width)]))
 
         random.seed()
 
-        self.score = 0
-        self.blocksCounter = 0
-        self.destroyedLines = 0
-
         self.newBlock()
-        self.holdedBlock = 7
         self.putBlockOnMap()
 
 
     def tetris(self):
         if self.isLaying():
             self.checkAndDestroyLine()
-            if self.newBlock():
+            if not self.newBlock():
                 return (True, self.blocksCounter, self.destroyedLines)
+            self.blocksCounter += 1
         else:
             self.wipeBlockFromMap()
             self.currentBlock.y -= 1
@@ -100,12 +96,17 @@ class Tetris:
 
     
     def hold(self):
+        if self.lastHoldedBlockNumber == self.blocksCounter:
+            return
+
+        self.lastHoldedBlockNumber = self.blocksCounter
         newHoldedBlock = self.currentBlock.blockType
-        self.putBlockOnMap(True)
+
+        self.wipeBlockFromMap()
         self.newBlock(self.holdedBlock if self.holdedBlock < 6 else -1)
         self.putBlockOnMap()
-        self.holdedBlock = newHoldedBlock
 
+        self.holdedBlock = newHoldedBlock
 
 
     def checkAndDestroyLine(self):
@@ -152,20 +153,18 @@ class Tetris:
         self.currentBlock.y = self.mapHeight - self.currentBlock.h
         
         if self.isColliding():
-            return True
+            return False
 
-        self.blocksCounter += 1
-
-        return False
+        return True
 
 
     def putBlockOnMap(self, delBlock=False):
         for i in range(self.currentBlock.h):
             for j in range(self.currentBlock.w):
                 try:
-                    if delBlock and (self.currentBlock.block[i][j] != 0):
+                    if delBlock and (self.currentBlock.block[i][j] != self.emptyMapVal):
                         self.map[self.currentBlock.y + i][self.currentBlock.x + j] = self.emptyMapVal
-                    elif self.currentBlock.block[i][j] != 0:
+                    elif self.currentBlock.block[i][j] != self.emptyMapVal:
                         self.map[self.currentBlock.y + i][self.currentBlock.x + j] = self.currentBlock.blockType
                 except:
                     pass
@@ -176,8 +175,18 @@ class Tetris:
 
 
 class Block:
+    blockPreset = [
+                [[0, 0, 0, 0]],
+                [[1, 1], [1, -1], [1, -1]],
+                [[2, 2], [-1, 2], [-1, 2]],
+                [[3, 3, -1], [-1, 3, 3]],
+                [[-1, 4, 4], [4, 4, -1]],
+                [[5, 5], [5, 5]],
+                [[6, 6, 6], [-1, 6, -1]],
+                [[-1]]
+            ]
 
-    def __init__(self, blockType, x=0, y=0, blockPreset=None):
+    def __init__(self, blockType, x=0, y=0):
         """
         Blocks in default preset:
             0 - long skinny one
@@ -189,22 +198,11 @@ class Block:
             6 - pyramid
         """
         self.blockType = blockType
+            
+        if not -1 < blockType < len(self.blockPreset):
+            blockType = -1
 
-        if blockPreset == None:
-            blockPreset = [
-                [[True, True, True, True]],
-                [[True, True], [True, False], [True, False]],
-                [[True, True], [False, True], [False, True]],
-                [[True, True, False], [False, True, True]],
-                [[False, True, True], [True, True, False]],
-                [[True, True], [True, True]],
-                [[True, True, True], [False, True, False]],
-                [[]]
-            ]
-        try:
-            self.block = blockPreset[blockType]
-        except:
-            self.block = blockPreset[-1]
+        self.block = self.blockPreset[blockType]
 
         self.x = x
         self.y = y
@@ -233,28 +231,21 @@ class Block:
         
         for i in range(len(self.block[0])):
             for j in range(len(self.block)):
-                if self.block[j][i]:
+                if self.block[j][i] != -1:
                     skirt.append(j)
                     break
 
         return skirt
 
-    def coloredBlock(self):
-        output = []
-
-        for i in self.block:
-            outputLine = []
-            for j in i:
-                if j:
-                    outputLine.append(self.blockType)
-                else:
-                    outputLine.append(-1)
-            output.append(outputLine)
-        return output
+    @classmethod
+    def defBlocks(self):
+        for i in self.blockPreset:
+            yield i
 
 
 def main():
-    pass
+    for block in Block.defBlocks():
+        print(block)
 
 if __name__ == "__main__":
     main()
