@@ -5,7 +5,7 @@ from pynput import keyboard
 import time
 
 cetris = tetris.Tetris()
-gui = simplegui.SimplestGui()
+gui = simplegui.TerminalGui()
 speed = 0.5
 
 
