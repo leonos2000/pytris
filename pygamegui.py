@@ -1,5 +1,5 @@
 import pygame
-from pytris import Tetris
+import pytris
         
 
 def colorRGB(color='white'):
@@ -26,9 +26,10 @@ def colorRGB(color='white'):
 def displayBlock(x, y, blockCode):
     gameDisplay.blit(pygame.image.load(f'blockImages/block{blockCode}.png'), (x, y))
 
-def displayMainFrame(x, y, tetrisData):
+def displayBlocks(x, y, tetrisData):
+    tmpX = x
     for line in tetrisData:
-        x = 100
+        x = tmpX
         for block in line:
             if block != tetris.emptyMapVal:
                 displayBlock(x, y, block)
@@ -36,7 +37,36 @@ def displayMainFrame(x, y, tetrisData):
         y -= 40
 
 
-tetris = Tetris()
+def renderBlocks():
+    displayBlocks(100, 860, tetris.map)
+    holdedBlock = pytris.Block(tetris.holdedBlock)
+    displayBlocks(540, 220, holdedBlock.block)
+    nextBlock = pytris.Block(tetris.queue[0])
+    displayBlocks(540, 440, nextBlock.block)
+
+    nextX = 540
+    nextY = 440
+
+    for block in holdedBlocks():
+        displayBlocks(nextX, nextY, block)
+        nextY += 160
+
+
+def renderText(x, y, text):
+    infoText = pygame.font.Font('freesansbold.ttf', 40)
+    textSurface = infoText.render(text, True, colorRGB('black'))
+    textRect = textSurface.get_rect()
+    textRect.center = (x, y)
+    gameDisplay.blit(textSurface, textRect)
+
+
+def holdedBlocks():
+    for block in tetris.queue:
+        nextBlock = pytris.Block(block)
+        yield nextBlock.block
+
+
+tetris = pytris.Tetris()
 
 pygame.init()
 
@@ -48,17 +78,17 @@ pygame.display.set_caption('Pytris with pygame frontend')
 
 clock = pygame.time.Clock()
 
-tetrisSpeed = 60
 speedCounter = 0
 crashed = False
 while not crashed:
     gameDisplay.fill(colorRGB('white'))
-    pygame.draw.rect(gameDisplay, colorRGB('black'), (100, 140, 400, 800))
+    pygame.draw.rect(gameDisplay, colorRGB('black'), (100, 100, 400, 800))
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             crashed = True
-        if event.type == pygame.KEYDOWN:
+
+        elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
                 tetris.move('left')
             elif event.key == pygame.K_RIGHT:
@@ -66,22 +96,33 @@ while not crashed:
             elif event.key == pygame.K_UP:
                 tetris.rotate('cw')
             elif event.key == pygame.K_SPACE:
-                tetris.drop()
+                tetris.hardDrop()
+            elif event.key == pygame.K_DOWN:
+                tetris.softDrop()
+            elif event.key == pygame.K_c:
+                tetris.hold()
 
-        displayMainFrame(100, 900, tetris.map)
-        pygame.display.update()
+        elif event.type == pygame.KEYUP:
+            if event.key == pygame.K_DOWN:
+                tetris.endSoftDrop()
 
         print(event)
 
     
-    if speedCounter % tetrisSpeed == 0:
-        tetris.tetris()
+    if speedCounter / 60 > tetris.delay / 1000:
+        if not tetris.tetris():
+            crashed = True
+        speedCounter = 0
+    else:
+        speedCounter += 1
 
-    displayMainFrame(100, 900, tetris.map)
-
+    renderBlocks()
+    renderText(620, 80, 'HOLD')
+    renderText(620, 280, 'NEXT')
+    renderText(320, 40, f'SCORE: {tetris.score} LEVEL: {tetris.level} LINES: {tetris.destroyedLines}')
     pygame.display.update()
+
     clock.tick(60)
-    speedCounter += 1
 
 pygame.quit()
 quit()
